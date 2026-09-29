@@ -1,0 +1,75 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * agent-lint — vypíše, čo by inštalácia manifestu odmietla, bez spustenia platformy.
+ *
+ * Použitie:  vendor/bin/agent-lint "Leoness\\Agent\\SeoAuditor\\SeoAuditorAgent" [...]
+ *
+ * Agent sa vytvára bez konštruktora: manifest() musí byť čistý popis, takže na jeho
+ * prečítanie nesmie byť potrebná ani jedna závislosť. Agent, ktorému to nestačí,
+ * má manifest, ktorý nie je čistý — a to je presne nález, nie obmedzenie nástroja.
+ */
+
+use Leoness\AgentSdk\AgentInterface;
+use Leoness\AgentSdk\Validation\ManifestLinter;
+
+// Composer's bin proxy announces the project autoloader; the fallbacks cover being run
+// straight from a checkout of this repository.
+foreach ([$GLOBALS['_composer_autoload_path'] ?? null, __DIR__.'/../../../autoload.php', __DIR__.'/../vendor/autoload.php'] as $autoload) {
+    if (null !== $autoload && is_file($autoload)) {
+        require $autoload;
+        break;
+    }
+}
+
+$classes = array_slice($_SERVER['argv'], 1);
+
+if ([] === $classes) {
+    fwrite(STDERR, "Použitie: agent-lint <TriedaAgenta> [...]\n");
+    exit(2);
+}
+
+$linter = new ManifestLinter();
+$failed = false;
+
+foreach ($classes as $class) {
+    if (!class_exists($class)) {
+        fwrite(STDERR, sprintf("[CHYBA] Trieda %s neexistuje.\n", $class));
+        $failed = true;
+        continue;
+    }
+
+    if (!is_subclass_of($class, AgentInterface::class)) {
+        fwrite(STDERR, sprintf("[CHYBA] %s neimplementuje %s.\n", $class, AgentInterface::class));
+        $failed = true;
+        continue;
+    }
+
+    try {
+        /** @var AgentInterface $agent */
+        $agent = new ReflectionClass($class)->newInstanceWithoutConstructor();
+        $manifest = $agent->manifest();
+    } catch (Throwable $error) {
+        fwrite(STDERR, sprintf("[CHYBA] %s: manifest() nie je čistý popis — bez závislostí sa nedá prečítať (%s).\n", $class, $error->getMessage()));
+        $failed = true;
+        continue;
+    }
+
+    $problems = $linter->lint($manifest);
+
+    if ([] === $problems) {
+        fwrite(STDOUT, sprintf("[OK] %s (%s)\n", $class, $manifest->code));
+        continue;
+    }
+
+    $failed = true;
+
+    foreach ($problems as $problem) {
+        fwrite(STDERR, sprintf("[CHYBA] %s: %s\n", $class, $problem));
+    }
+}
+
+exit($failed ? 1 : 0);
