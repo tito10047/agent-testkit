@@ -34,8 +34,18 @@ jobs:
             # len vtedy, keď composer žiadne vlastné prihlásenie nemá a nechá URL tak.
             # Repozitáre balíkov majú preto aj `"no-api": true` — bez neho by composer šiel
             # cez GitHub API, dostal 404 a prepadol späť na git až po zbytočnom kole.
-            - name: Git auth na privátne leoness/* repozitáre
-              run: git config --global url."https://x-access-token:${{ secrets.LEONESS_COMPOSER_TOKEN }}@github.com/".insteadOf "https://github.com/"
+            # Obe cesty, lebo composer používa obe: metadáta číta cez git (repozitáre
+            # balíkov majú `"no-api": true`), ale samotný balík sťahuje ako zip cez
+            # api.github.com — a na privátnom repe je to bez tokenu 404. `insteadOf`
+            # pokrýva git, `github-oauth` API.
+            #
+            # Tvar x-access-token:<token> je ten, ktorý GitHub pre fine-grained tokeny
+            # prijíma pri git operáciách; composer si pri `github-oauth` skladá vlastný
+            # (`<token>:x-oauth-basic`), preto to nestačí nastaviť len jemu.
+            - name: Prístup na privátne leoness/* repozitáre
+              run: |
+                  git config --global url."https://x-access-token:${{ secrets.LEONESS_COMPOSER_TOKEN }}@github.com/".insteadOf "https://github.com/"
+                  composer config -g github-oauth.github.com "${{ secrets.LEONESS_COMPOSER_TOKEN }}"
 
             - name: Validate
               run: composer validate --strict
