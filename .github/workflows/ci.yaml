@@ -19,8 +19,17 @@ jobs:
 
             # LEONESS_COMPOSER_TOKEN je org secret: fine-grained PAT machine účtu,
             # oprávnenie iba Contents:read na agent repá.
+            # Dva spôsoby, lebo composer má dve cesty k privátnemu repozitáru a token musí
+            # fungovať na oboch: `github-oauth` pokrýva GitHub API (rýchle zip sťahovanie),
+            # `insteadOf` pokrýva `git clone`, na ktorý composer prepadne, keď API odpovie
+            # 404 — a tam GitHub fine-grained token ako *heslo* neprijme
+            # ("Password authentication is not supported for Git operations"). Formát
+            # x-access-token:<token> je ten, ktorý podporuje; rovnaký používa aj platforma
+            # v App\Packaging\Provision\GitWorkspace.
             - name: Composer auth
-              run: composer config -g github-oauth.github.com "${{ secrets.LEONESS_COMPOSER_TOKEN }}"
+              run: |
+                  composer config -g github-oauth.github.com "${{ secrets.LEONESS_COMPOSER_TOKEN }}"
+                  git config --global url."https://x-access-token:${{ secrets.LEONESS_COMPOSER_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
             - name: Validate
               run: composer validate --strict
