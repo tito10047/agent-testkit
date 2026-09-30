@@ -22,5 +22,11 @@
     ],
     "config": {
         "sort-packages": true
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/tito10047/agent-sdk"
+        }
+    ]
 }
