@@ -26,7 +26,8 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/tito10047/agent-sdk"
+            "url": "https://github.com/tito10047/agent-sdk",
+            "no-api": true
         }
     ]
 }
