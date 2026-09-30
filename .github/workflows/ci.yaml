@@ -26,10 +26,16 @@ jobs:
             # ("Password authentication is not supported for Git operations"). Formát
             # x-access-token:<token> je ten, ktorý podporuje; rovnaký používa aj platforma
             # v App\Packaging\Provision\GitWorkspace.
-            - name: Composer auth
-              run: |
-                  composer config -g github-oauth.github.com "${{ secrets.LEONESS_COMPOSER_TOKEN }}"
-                  git config --global url."https://x-access-token:${{ secrets.LEONESS_COMPOSER_TOKEN }}@github.com/".insteadOf "https://github.com/"
+            # Iba git, zámerne bez `composer config github-oauth`. Composer si s ním totiž
+            # skladá URL sám (`https://<token>:x-oauth-basic@github.com/…`) a tým prebije
+            # `insteadOf` — a GitHub v tomto tvare fine-grained token odmieta:
+            # "Invalid username or token. Password authentication is not supported for Git
+            # operations." Tvar, ktorý prijíma, je x-access-token:<token>, a ten sa uplatní
+            # len vtedy, keď composer žiadne vlastné prihlásenie nemá a nechá URL tak.
+            # Repozitáre balíkov majú preto aj `"no-api": true` — bez neho by composer šiel
+            # cez GitHub API, dostal 404 a prepadol späť na git až po zbytočnom kole.
+            - name: Git auth na privátne leoness/* repozitáre
+              run: git config --global url."https://x-access-token:${{ secrets.LEONESS_COMPOSER_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
             - name: Validate
               run: composer validate --strict
