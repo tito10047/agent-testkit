@@ -1,0 +1,32 @@
+name: CI
+
+on:
+    push:
+    pull_request:
+
+# Testkit je to, čím si agentové balíky overujú schopnosť nasadenia — keď je pokazený on,
+# pokazí sa overovanie všetkých ostatných, a to tichšie, než by malo.
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  coverage: none
+
+            # LEONESS_COMPOSER_TOKEN je org secret: fine-grained PAT machine účtu,
+            # oprávnenie iba Contents:read na agent repá.
+            - name: Composer auth
+              run: composer config -g github-oauth.github.com "${{ secrets.LEONESS_COMPOSER_TOKEN }}"
+
+            - name: Validate
+              run: composer validate --strict
+
+            - name: Install
+              run: composer install --no-interaction --no-progress
+
+            - name: Lint
+              run: find src bin -name '*.php' -print0 | xargs -0 -n1 php -l
