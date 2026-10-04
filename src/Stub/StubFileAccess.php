@@ -17,10 +17,12 @@ final class StubFileAccess implements AgentFileAccessInterface
     /**
      * @param list<StoredFileHandleInterface>             $readable   what findForCurrentUser() may return
      * @param array<int, list<StoredFileHandleInterface>> $runOutputs handles by run id
+     * @param array<int, list<StoredFileHandleInterface>> $runInputs  what a run was started with, by run id
      */
     public function __construct(
         private array $readable = [],
         private array $runOutputs = [],
+        private array $runInputs = [],
     ) {
     }
 
@@ -37,7 +39,20 @@ final class StubFileAccess implements AgentFileAccessInterface
 
     public function findRunOutput(int $runId, int $fileId): ?StoredFileHandleInterface
     {
-        foreach ($this->runOutputs[$runId] ?? [] as $handle) {
+        return self::among($this->runOutputs[$runId] ?? [], $fileId);
+    }
+
+    public function findRunInput(int $runId, int $fileId): ?StoredFileHandleInterface
+    {
+        return self::among($this->runInputs[$runId] ?? [], $fileId);
+    }
+
+    /**
+     * @param list<StoredFileHandleInterface> $handles
+     */
+    private static function among(array $handles, int $fileId): ?StoredFileHandleInterface
+    {
+        foreach ($handles as $handle) {
             if ($handle->id() === $fileId) {
                 return $handle;
             }

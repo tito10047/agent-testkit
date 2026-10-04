@@ -22,6 +22,7 @@ final readonly class FinishedRunStub implements FinishedRunInterface
      * @param array<string, mixed>      $inputSnapshot
      * @param array<string, mixed>|null $output
      * @param list<RunFileView>         $files
+     * @param list<RunFileView>         $inputFiles
      */
     private function __construct(
         private int $id,
@@ -34,6 +35,7 @@ final readonly class FinishedRunStub implements FinishedRunInterface
         private ?string $errorMessage,
         private ?\DateTimeImmutable $finishedAt,
         private array $files,
+        private array $inputFiles = [],
     ) {
     }
 
@@ -41,6 +43,7 @@ final readonly class FinishedRunStub implements FinishedRunInterface
      * @param array<string, mixed> $output
      * @param array<string, mixed> $input
      * @param list<RunFileView>    $files
+     * @param list<RunFileView>    $inputFiles what the question carried, when the agent checks its result against it
      */
     public static function succeeded(
         array $output = [],
@@ -50,8 +53,9 @@ final readonly class FinishedRunStub implements FinishedRunInterface
         array $files = [],
         int $id = 1,
         string $agentCode = 'agent',
+        array $inputFiles = [],
     ): self {
-        return new self($id, $agentCode, RunStatus::Succeeded, $trigger, $input, $output, $outputText, null, new \DateTimeImmutable('2026-01-01 08:00:00'), $files);
+        return new self($id, $agentCode, RunStatus::Succeeded, $trigger, $input, $output, $outputText, null, new \DateTimeImmutable('2026-01-01 08:00:00'), $files, $inputFiles);
     }
 
     /**
@@ -127,5 +131,10 @@ final readonly class FinishedRunStub implements FinishedRunInterface
     public function files(): array
     {
         return $this->files;
+    }
+
+    public function inputFiles(): array
+    {
+        return $this->inputFiles;
     }
 }
