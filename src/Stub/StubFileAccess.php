@@ -8,51 +8,22 @@ use Leoness\AgentSdk\Platform\AgentFileAccessInterface;
 use Leoness\AgentSdk\Platform\StoredFileHandleInterface;
 
 /**
- * File access a test seeds by hand: which handles the "current user" may read, and
- * which a given run handed over. Anything not seeded is null, exactly like the
- * platform refusing to say whether the file exists.
+ * File access a test seeds by hand: which handles the "current user" may read. Anything
+ * not seeded is null, exactly like the platform refusing to say whether the file exists.
  */
-final class StubFileAccess implements AgentFileAccessInterface
+final readonly class StubFileAccess implements AgentFileAccessInterface
 {
     /**
-     * @param list<StoredFileHandleInterface>             $readable   what findForCurrentUser() may return
-     * @param array<int, list<StoredFileHandleInterface>> $runOutputs handles by run id
-     * @param array<int, list<StoredFileHandleInterface>> $runInputs  what a run was started with, by run id
+     * @param list<StoredFileHandleInterface> $readable what findForCurrentUser() may return
      */
     public function __construct(
         private array $readable = [],
-        private array $runOutputs = [],
-        private array $runInputs = [],
     ) {
     }
 
     public function findForCurrentUser(int $fileId): ?StoredFileHandleInterface
     {
         foreach ($this->readable as $handle) {
-            if ($handle->id() === $fileId) {
-                return $handle;
-            }
-        }
-
-        return null;
-    }
-
-    public function findRunOutput(int $runId, int $fileId): ?StoredFileHandleInterface
-    {
-        return self::among($this->runOutputs[$runId] ?? [], $fileId);
-    }
-
-    public function findRunInput(int $runId, int $fileId): ?StoredFileHandleInterface
-    {
-        return self::among($this->runInputs[$runId] ?? [], $fileId);
-    }
-
-    /**
-     * @param list<StoredFileHandleInterface> $handles
-     */
-    private static function among(array $handles, int $fileId): ?StoredFileHandleInterface
-    {
-        foreach ($handles as $handle) {
             if ($handle->id() === $fileId) {
                 return $handle;
             }

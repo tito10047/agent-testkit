@@ -1,41 +1,44 @@
 # leoness/agent-testkit
 
-„Test schopnosti nasadenia“ pre agentové balíky Leoness AI. Beží **bez DB, bez
-core a bez siete** — všetko pracuje len nad manifestom a stubmi SDK kontraktov.
+Pomôcky na testovanie **balíkov MCP nástrojov** Leoness AI. Beží **bez DB, bez core
+a bez siete** — všetko pracuje nad atribútmi nástrojov a stubmi SDK kontraktov.
 
-## Ako sa používa
+## Deklarácia nástrojov
 
 ```php
-final class SeoAuditorAgentTest extends AgentDeployabilityCase
+final class ToolDeclarationTest extends ToolDeclarationCase
 {
-    protected function agent(): AgentInterface
+    protected function toolClasses(): array
     {
-        return new SeoAuditorAgent(
-            new CollectingNotifier(),
-            new StubRecipientDirectory(),
-            new NullLogger(),
-        );
-    }
-
-    protected function capabilities(): CapabilityMap
-    {
-        return new CapabilityMap(tools: ['najdi_produkt']);
+        return [RowCountTool::class];
     }
 }
 ```
 
-Zdedené final testy overia: manifest prejde `ManifestLinter`om (strict schéma,
-parsovateľné pravidlá, prompt premenné ⊆ vstupné polia), prompt sa vyrenderuje
-z deklarovaných vstupov, whitelisty ⊆ `CapabilityMap`, technicky znejúce polia
-sú `FactClaim` a schéma prežije round-trip editora.
+Zdedené final testy overia to isté, čo previerka balíka pri inštalácii: každý nástroj
+má `#[AsTool]` s názvom v snake_case a neprázdnym popisom, je chránený
+`#[IsGrantedTool('TOOL_<NÁZOV>')]` (oprávnenie = `TOOL_` + názov veľkými písmenami,
+`ToolDeclarationLint::permissionFor()`), žiadna trieda nie je `App\*` a žiadne dva
+nástroje nemajú rovnaký názov.
 
-Logiku `handleFinishedRun()` testuj cez `Stub\FinishedRunStub` (`::succeeded()`,
-`::failed()`, `::cancelled()`); notifikácie cez `Stub\CollectingNotifier`.
+## Stuby portov SDK
 
-`Rehearsal\ManifestRehearsal` pustí vzorovú odpoveď proti schéme aj pravidlám —
-dôkaz, že „dobrá odpoveď“ podľa autora prejde jeho vlastnými bránami.
+- `Stub\StubFileAccess` + `Stub\StoredFileHandleStub` — súbory, ktoré „aktuálny
+  používateľ“ smie čítať (ID ako z `priprav_nahratie`); čo nie je naseedované, je null.
+- `Stub\CollectingConfirmationRequests` — zbiera `ProposedAction`, ktoré nástroj
+  odovzdal na potvrdenie, a vracia číslo a odkaz. Test overí, že nástroj nekonal sám
+  (`single()` vráti jediný návrh) a s tým istým payloadom potom zavolá vykonávateľa.
+- `Stub\PlatformUserStub` — konto bez entity platformy.
+- `Stub\CollectingLogger` — logger, ktorý si drží riadky.
 
 ## CI
 
-`vendor/bin/agent-lint "Leoness\\Agent\\X\\XAgent"` — exit 1, keď by inštalácia
-manifest odmietla.
+`vendor/bin/agent-lint "Leoness\\Agent\\X\\Tool\\XTool" [...]` — exit 1, keď by previerka
+deklaráciu nástroja odmietla.
+
+## Verzia 3.0
+
+Odobrané všetko agentové: `AgentDeployabilityCase`, `CapabilityMap`,
+`Rehearsal\ManifestRehearsal`, `FinishedRunStub`, `CollectingRunAnnotator`,
+`StubRecipientDirectory`, `CollectingNotifier`; `StubFileAccess` už nemá súbory behov.
+Pribudli `ToolDeclarationCase`, `ToolDeclarationLint` a `CollectingConfirmationRequests`.

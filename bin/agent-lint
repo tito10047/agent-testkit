@@ -4,17 +4,16 @@
 declare(strict_types=1);
 
 /**
- * agent-lint — vypíše, čo by inštalácia manifestu odmietla, bez spustenia platformy.
+ * agent-lint — vypíše, čo by previerka balíka odmietla na deklarácii nástrojov, bez
+ * spustenia platformy.
  *
- * Použitie:  vendor/bin/agent-lint "Leoness\\Agent\\SeoAuditor\\SeoAuditorAgent" [...]
+ * Použitie:  vendor/bin/agent-lint "Leoness\\Agent\\X\\Tool\\MojNastrojTool" [...]
  *
- * Agent sa vytvára bez konštruktora: manifest() musí byť čistý popis, takže na jeho
- * prečítanie nesmie byť potrebná ani jedna závislosť. Agent, ktorému to nestačí,
- * má manifest, ktorý nie je čistý — a to je presne nález, nie obmedzenie nástroja.
+ * Pravidlá sú tie isté ako v {@see Leoness\AgentTestkit\ToolDeclarationCase}: #[AsTool]
+ * s názvom v snake_case a popisom, a #[IsGrantedTool('TOOL_<NÁZOV>')].
  */
 
-use Leoness\AgentSdk\AgentInterface;
-use Leoness\AgentSdk\Validation\ManifestLinter;
+use Leoness\AgentTestkit\ToolDeclarationLint;
 
 // Composer's bin proxy announces the project autoloader; the fallbacks cover being run
 // straight from a checkout of this repository.
@@ -28,11 +27,11 @@ foreach ([$GLOBALS['_composer_autoload_path'] ?? null, __DIR__.'/../../../autolo
 $classes = array_slice($_SERVER['argv'], 1);
 
 if ([] === $classes) {
-    fwrite(STDERR, "Použitie: agent-lint <TriedaAgenta> [...]\n");
+    fwrite(STDERR, "Použitie: agent-lint <TriedaNástroja> [...]\n");
     exit(2);
 }
 
-$linter = new ManifestLinter();
+$lint = new ToolDeclarationLint();
 $failed = false;
 
 foreach ($classes as $class) {
@@ -42,34 +41,17 @@ foreach ($classes as $class) {
         continue;
     }
 
-    if (!is_subclass_of($class, AgentInterface::class)) {
-        fwrite(STDERR, sprintf("[CHYBA] %s neimplementuje %s.\n", $class, AgentInterface::class));
-        $failed = true;
-        continue;
-    }
-
-    try {
-        /** @var AgentInterface $agent */
-        $agent = new ReflectionClass($class)->newInstanceWithoutConstructor();
-        $manifest = $agent->manifest();
-    } catch (Throwable $error) {
-        fwrite(STDERR, sprintf("[CHYBA] %s: manifest() nie je čistý popis — bez závislostí sa nedá prečítať (%s).\n", $class, $error->getMessage()));
-        $failed = true;
-        continue;
-    }
-
-    $problems = $linter->lint($manifest);
-
-    if ([] === $problems) {
-        fwrite(STDOUT, sprintf("[OK] %s (%s)\n", $class, $manifest->code));
-        continue;
-    }
-
-    $failed = true;
+    $problems = $lint->problemsOf($class);
 
     foreach ($problems as $problem) {
-        fwrite(STDERR, sprintf("[CHYBA] %s: %s\n", $class, $problem));
+        fwrite(STDERR, sprintf("[CHYBA] %s\n", $problem));
     }
+
+    if ([] === $problems) {
+        fwrite(STDOUT, sprintf("[OK] %s: %s\n", $class, implode(', ', $lint->toolNames($class))));
+    }
+
+    $failed = $failed || [] !== $problems;
 }
 
 exit($failed ? 1 : 0);

@@ -7,7 +7,7 @@ namespace Leoness\AgentTestkit\Stub;
 use Psr\Log\AbstractLogger;
 
 /**
- * A logger that keeps its lines, because "the agent said so in the log" is an
+ * A logger that keeps its lines, because "the tool said so in the log" is an
  * assertion, not a side effect.
  */
 final class CollectingLogger extends AbstractLogger
